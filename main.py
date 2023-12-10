@@ -1,4 +1,5 @@
 import boto3
+from botocore.exceptions import NoCredentialsError
 import os
 import sys
 from PIL import Image
@@ -6,19 +7,21 @@ from dotenv import load_dotenv
 
 def is_valid_image(file_path):
     try:
-        with Image.open(file_path) as img:
+        with Image.open(file_path) as _:
             return True
     except Exception as e:
         print(f"Error opening image: {e}")
         return False
 
-def main():
-    aws_profile = os.getenv('AWS_PROFILE')
-    session = boto3.Session(profile_name=aws_profile)
-    s3 = session.resource('s3')
-    
-    for bucket in s3.buckets.all():
-        print(bucket.name)
+def main(image_path):
+    s3 = boto3.client('s3')
+    bucket = os.getenv('S3_BUCKET')
+
+    try:
+        s3.upload_file(image_path, bucket, image_path)
+        print(f"File '{image_path}' uploaded to '{bucket}/{image_path}' successfully.")
+    except NoCredentialsError:
+        print("Credentials not available.")
 
 if __name__ == "__main__":
     # Load environment variables from .env file
@@ -41,4 +44,4 @@ if __name__ == "__main__":
         print(f"Error: {image_path} is not a valid image file.")
         sys.exit(1)
 
-    main()
+    main(image_path)
